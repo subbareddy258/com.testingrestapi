@@ -1,16 +1,21 @@
 package utlis;
 
+import io.cucumber.datatable.DataTable;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-import static  io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.given;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+
 import java.io.IOException;
-import java.util.Locale;
+
+import java.util.Map;
 import java.util.Properties;
 
 public class Utils {
@@ -53,6 +58,7 @@ public class Utils {
                     .build();
         }
     }
+
     public static RequestSpecification RequestSpecification() throws IOException {
         if ("no".equalsIgnoreCase(System.getProperty("proxy"))) {
             return new RequestSpecBuilder()
@@ -78,25 +84,46 @@ public class Utils {
             default:
                 throw new IllegalStateException("test fail");
         }
-        FileInputStream in =new FileInputStream(path);
+        FileInputStream in = new FileInputStream(path);
         prop.load(in);
         return prop.getProperty(getData);
     }
-    public static boolean swaggerValidationRequired()
-    {
+
+    public static boolean swaggerValidationRequired() {
         return "yes".equalsIgnoreCase(System.getProperty("swagger.validation"));
     }
 
-    public static Response getswaggerValidation(String component, Response response,String schema) throws IOException {
-        return  given(RequestSpecification()).pathParam("component",component).pathParam("schemaType",schema)
+    public static Response getswaggerValidation(String component, Response response, String schema) throws IOException {
+        return given(RequestSpecification()).pathParam("component", component).pathParam("schemaType", schema)
                 .body(response.then().extract().response().asString())
-                .post(getPropertyData("endPoint")+"/swagger/validate/{component}/{SchemaType")
+                .post(getPropertyData("endPoint") + "/swagger/validate/{component}/{SchemaType")
                 .then().assertThat().statusCode(200).extract().response();
     }
 
 
-    public static String getProxyHostName()
+    public static String getProxyHostName() {
+        return System.getProperty("proxy", "test").toLowerCase();
+    }
+
+    public static String getXrequestId(Response response) {
+        return response.getHeader("x-request-id");
+    }
+
+    public static JSONArray getExpectedErrorArray(DataTable errorArrayAsTable, Response response) {
+        JSONArray array = new JSONArray();
+        for (Map<String, String> data : errorArrayAsTable.asMaps(String.class, String.class)) {
+            JSONObject jsonobject = new JSONObject();
+            String errorMessage = data.get("ErrorMessageArray").toString();
+            jsonobject.put("code", data.get("ErrorCode").toString());
+            jsonobject.put("message", errorMessage.contains("%s") ? String.format(errorMessage, getXrequestId(response)) : errorMessage);
+            array.put(jsonobject);
+        }
+        return array;
+    }
+
+
+    public static JSONArray getActualErrorArray(Response response)
     {
-        return System.getProperty("proxy","test").toLowerCase();
+        return new JSONArray(response.jsonPath().getList("errors"));
     }
 }
