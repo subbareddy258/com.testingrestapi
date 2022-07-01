@@ -11,4 +11,11 @@ String payload;
         testReqBody.put("test",test);
         return testReqBody;
     }
+    public static JSONObject token()
+    {
+        JSONObject tokenRequestBody =  new JSONObject();
+        tokenRequestBody.put("password","password123");
+        tokenRequestBody.put("username","admin");
+        return tokenRequestBody;
+    }
 }

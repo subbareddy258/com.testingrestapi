@@ -7,6 +7,8 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.github.bonigarcia.wdm.WebDriverManager;
+import io.restassured.http.ContentType;
+import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -14,19 +16,25 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.testng.Assert;
+import org.testng.asserts.SoftAssert;
 import stepDefinationsImpl.ReqresImpl;
+import utlis.PayloadGenerator;
 import utlis.Utils;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.requestSpecification;
 import static org.testng.AssertJUnit.fail;
-import static utlis.Utils.getXrequestId;
+import static utlis.Utils.*;
 
 public class usersStepdefinition extends AbstractStepDefinition {
     ReqresImpl ReqresImpl = new ReqresImpl();
+    SoftAssert softAssert = new SoftAssert();
 
     @When("client retrieve the get users with {string}")
     public void test(String scenario) {
@@ -96,32 +104,56 @@ public class usersStepdefinition extends AbstractStepDefinition {
 
             } else {
                 for (Map<String, String> data : errorArrayAsDataTable.asMaps(String.class, String.class)) {
-                    expectedmessage=data.get("ErrorMessage").toString();
-                    if(expectedmessage.contains("%s"))
-                    {
-                        expectedmessage = getFormattedErrorMsg(data.get("ErrorMessage").toString(),response);
+                    expectedmessage = data.get("ErrorMessage").toString();
+                    if (expectedmessage.contains("%s")) {
+                        expectedmessage = getFormattedErrorMsg(data.get("ErrorMessage").toString(), response);
                     }
                     actualmessage = response.then().extract().jsonPath().getString("errors[" + i + "].message");
-                    Assert.assertEquals(response.then().extract().jsonPath().getString("errors[" + i + "].code"),data.get("ErrorCode"));
-                    Assert.assertTrue(actualmessage.contains(expectedmessage),"Actual Message:-" + actualmessage + " doesn't contain expected message:-" + expectedmessage);
-                i++;
+                    Assert.assertEquals(response.then().extract().jsonPath().getString("errors[" + i + "].code"), data.get("ErrorCode"));
+                    Assert.assertTrue(actualmessage.contains(expectedmessage), "Actual Message:-" + actualmessage + " doesn't contain expected message:-" + expectedmessage);
+                    i++;
                 }
 
-                }
+            }
 
-            }
-        }
-
-        private String getFormattedErrorMsg(String errormessage,Response response)
-        {
-            if(errormessage.contains("id"))
-            {
-                errormessage =String.format(errormessage,userId,getXrequestId(response));
-            }
-            else
-            {
-                errormessage =String.format(errormessage,getXrequestId(response));
-            }
-            return  errormessage;
         }
     }
+
+    private String getFormattedErrorMsg(String errormessage, Response response) {
+        if (errormessage.contains("id")) {
+            errormessage = String.format(errormessage, userId, getXrequestId(response));
+        } else {
+            errormessage = String.format(errormessage, getXrequestId(response));
+        }
+        return errormessage;
+    }
+
+
+    @And("Verifies get users displayed properly")
+    public void verifiesGetUsersDisplayedProperly() {
+        getUsersRespJson = new JsonPath(getUsersResp.asString());
+        softAssert.assertEquals(getUsersRespJson.getString("total"), "12");
+        for (int i = 0; i < getUsersRespJson.getInt("data.size"); i++) {
+            softAssert.assertNotNull(getUsersRespJson.getString("data[" + i + "].email"), "email not found" + i);
+            softAssert.assertNotNull(getUsersRespJson.getString("data[" + i + "].first_name"), "first name not found" + i);
+            softAssert.assertNotNull(getUsersRespJson.getString("data[" + i + "].last_name"), "last name not found" + i);
+            softAssert.assertNotNull(getUsersRespJson.getString("data[" + i + "].id"), "id not found" + i);
+            softAssert.assertNotNull(getUsersRespJson.getString("data[" + i + "].avatar"), "avatar not found" + i);
+
+        }
+        softAssert.assertAll();
+    }
+
+    @Given("client token is genrated")
+    public void clientTokenIsGenrated() throws IOException {
+       /* clientToken1 =given().post(Utils.getPropertyData("bookerUrl") + "/auth").body()
+                .log().all().assertThat().statusCode(200).extract().jsonPath().getString("token");
+   */    }
+
+    @Given("token is generated")
+    public void Genrated() throws IOException {
+        System.out.println(PayloadGenerator.token());
+       String token= given().header("Content-Type"," application/json").body(PayloadGenerator.token()).post("https://restful-booker.herokuapp.com/auth").then().log().all().toString();
+       System.out.println(token);
+    }
+}

@@ -2,11 +2,13 @@ package utlis;
 
 import io.cucumber.datatable.DataTable;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.mapper.ObjectMapperType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.testng.Assert;
 
 import static io.restassured.RestAssured.given;
 
@@ -15,8 +17,11 @@ import java.io.FileInputStream;
 
 import java.io.IOException;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 
 public class Utils {
     public static String stack, browser;
@@ -86,6 +91,7 @@ public class Utils {
         }
         FileInputStream in = new FileInputStream(path);
         prop.load(in);
+        Assert.assertNotNull(prop.getProperty(getData),"[[TEST SCRIPT ISSUE]] There is no key=" +getData + "provided in the property file,kindly check");
         return prop.getProperty(getData);
     }
 
@@ -126,4 +132,24 @@ public class Utils {
     {
         return new JSONArray(response.jsonPath().getList("errors"));
     }
+
+
+    public void  genrateToken() throws IOException {
+
+    }
+    public static JSONObject parseJSONFile(String filename) throws IOException {
+        String content = new String(Files.readAllBytes(Paths.get(filename)));
+        return new JSONObject(content);
+
+    }
+
+    public static  String generateGuid()
+    {
+        return UUID.randomUUID().toString();
+    }
+
+    public static  int getProxyPortNumber(){
+        return Integer.parseInt(System.getProperty("proxy.port","8080"));
+    }
 }
+

@@ -9,5 +9,5 @@ public class AbstractStepDefinition {
     public static Response commonResponse;
     public static Response getListOfUsersResp,addUsersResp,getUsersResp;
     static Response getswaggerValidationResp;
-    static JsonPath orderResponse;
+    static JsonPath orderResponse,getUsersRespJson;
 }
